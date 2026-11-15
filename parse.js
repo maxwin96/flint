@@ -177,6 +177,12 @@ function expandTabs(line, indent = 0) {
 
 const BLANK_LINE = /^[ \t]*$/;
 
+/** The line starting at `p` in `src`, without its newline (no big copy). */
+function lineAt(src, p) {
+  const nl = src.indexOf('\n', p);
+  return nl === -1 ? src.slice(p) : src.slice(p, nl);
+}
+
 /** Drop trailing blank lines, keeping at most one. */
 function trimTrailingBlankLines(str) {
   const lines = str.split('\n');
@@ -1370,7 +1376,7 @@ function listAt(src, pos, ctx) {
     const firstLine = cap[2].split('\n', 1)[0];
     const bulletIndent = cap[1].length;
     const line = firstLine.replace(other.leadingSpaceTab, (ws) => expandTabs(ws, bulletIndent));
-    let nextLine = src.slice(p).split('\n', 1)[0];
+    let nextLine = lineAt(src, p);
     let blankLine = !line.trim();
     let indent = 0;
     let curLine = line;
@@ -1394,15 +1400,20 @@ function listAt(src, pos, ctx) {
       const htmlBeginRegex = other.htmlBeginRegex(indent);
       const blockquoteBeginRegex = other.blockquoteBeginRegex(indent);
       while (p < src.length) {
-        const rawLine = src.slice(p).split('\n', 1)[0];
+        const rawLine = lineAt(src, p);
         nextLine = rawLine;
         const nextLineWithoutTabs = nextLine.replace(other.leadingSpaceTab, (ws) => expandTabs(ws));
-        if (fencesBeginRegex.test(nextLine)) break;
-        if (headingBeginRegex.test(nextLine)) break;
-        if (htmlBeginRegex.test(nextLine)) break;
-        if (blockquoteBeginRegex.test(nextLine)) break;
-        if (nextBulletRegex.test(nextLine)) break;
-        if (hrRegex.test(nextLine)) break;
+        // First non-space character gates the six break regexes below:
+        // a plain text line matches none of them, so skip all six tests.
+        let fns = 0;
+        while (fns < nextLine.length && (nextLine.charCodeAt(fns) === 32 || nextLine.charCodeAt(fns) === 9)) fns++;
+        const fch = nextLine.charCodeAt(fns);
+        if ((fch === 96 || fch === 126) && fns <= 3 && fencesBeginRegex.test(nextLine)) break;
+        if (fch === 35 && fns <= 3 && headingBeginRegex.test(nextLine)) break;
+        if (fch === 60 && fns <= 3 && htmlBeginRegex.test(nextLine)) break;
+        if (fch === 62 && fns <= 3 && blockquoteBeginRegex.test(nextLine)) break;
+        if ((fch === 42 || fch === 43 || fch === 45 || (fch >= 48 && fch <= 57)) && fns <= indent && nextBulletRegex.test(nextLine)) break;
+        if ((fch === 45 || fch === 95 || fch === 42) && fns <= indent && hrRegex.test(nextLine)) break;
         if (nextLineWithoutTabs.search(other.nonSpaceChar) >= indent || !nextLine.trim()) {
           itemContents += '\n' + nextLineWithoutTabs.slice(indent);
         } else {
