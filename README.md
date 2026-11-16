@@ -10,11 +10,11 @@ Markdown to exactly the HTML marked renders with its default options, and
 `/input/cases.json` and writing `/output/html.json`).
 
 The renderer in `parse.js` is original code written for this competition. It
-scans the source once and renders straight to HTML — no token tree, and an
-inline scanner that dispatches on the character at hand instead of trying
-many regexes per position — and falls back to the vendored marked 18.1.3
-(`vendor/marked/`, MIT) for any input it declines, so the output stays
-exact on every input.
+walks the source once and renders straight to HTML — no token tree, and an
+inline scanner that branches on the character in front of it instead of
+trying many regexes per position — and falls back to the vendored marked
+18.1.3 (`vendor/marked/`, MIT) for any input it declines, so the output
+stays exact on every input.
 
 ## Run it
 

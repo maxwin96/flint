@@ -1,27 +1,28 @@
-// A fast drop-in for marked 18.1.3 (default options: GFM on, breaks off,
-// pedantic off, async off). parse(markdown) returns exactly the HTML that
-// marked renders for the same string.
+// A quick drop-in replacement for marked 18.1.3 under its default settings
+// (GFM enabled, breaks disabled, pedantic disabled, asynchronous off).
+// parse(markdown) returns the same HTML marked would produce for that string.
 //
-// The entry is built in two layers:
+// The entry has two layers:
 //
-//   1. fastParse() below: an original, dependency-free renderer written for
-//      this competition. It scans the source once, renders blocks and inline
-//      runs straight to an HTML string, and never builds a token tree. It
-//      handles the whole shape of document the competition draws (headings,
-//      paragraphs, lists, tables, fences, block quotes, raw HTML blocks, link
-//      reference definitions and the full inline set). Anything outside the
-//      shapes it is sure about makes it return null instead of guessing.
-//   2. The fallback: the vendored marked 18.1.3 itself
+//   1. fastParse() further down: a from-scratch renderer made for this
+//      bounty. It walks the source a single time and writes blocks and
+//      inline runs directly into an HTML string, without ever building a
+//      token tree. It covers the document shapes the contest draws from
+//      (headings, paragraphs, lists, tables, fences, block quotes, raw HTML
+//      blocks, link reference definitions and the complete inline set).
+//      Anything outside the shapes it is certain about makes it give back
+//      null instead of guessing.
+//   2. The safety net: the bundled marked 18.1.3 itself
 //      (vendor/marked/marked.esm.js, MIT, see vendor/marked/NOTICE), used
-//      only for an input fastParse() declines. The fallback is what keeps the
-//      entry exact on every input, including the spec examples.
+//      only when fastParse() declines an input. The safety net is what keeps
+//      the entry exact on every input, spec examples included.
 //
-// No result is ever cached or reused across calls: every call parses the
-// string it is given, alone, from scratch.
+// Nothing is ever cached or reused between calls: each call parses the
+// string it receives, alone, from the beginning.
 
 import { marked } from './vendor/marked/marked.esm.js';
 
-/** The HTML marked 18.1.3 renders for `markdown`, with marked's defaults. */
+/** The HTML marked 18.1.3 renders for `markdown`, using marked's defaults. */
 export function parse(markdown) {
   const fast = fastParse(markdown);
   if (fast !== null) return fast;
@@ -29,25 +30,25 @@ export function parse(markdown) {
 }
 
 /**
- * Render `markdown` with the fast renderer, or null when the input holds a
- * shape this renderer does not cover. Returning null is always safe: the
- * caller then renders with marked itself.
+ * Try the fast renderer on `markdown`; null when the input contains a shape
+ * this renderer does not cover. Null is always safe: the caller then renders
+ * with marked itself.
  *
- * The renderer mirrors marked 18.1.3's structure (same block order, same
- * inline precedence, same link-reference rules) but renders straight to an
- * HTML string: it never builds a token tree, and its inline scanner
- * dispatches on the character at hand instead of trying a dozen regular
- * expressions at every position. Two passes over the source: the first
- * collects the block structure and every link reference definition, the
- * second renders the blocks with the definitions complete (a definition
- * used before it is defined still resolves, as in marked).
+ * The renderer follows marked 18.1.3's shape (same block order, same inline
+ * precedence, same link-reference rules) but writes straight to an HTML
+ * string: no token tree is ever built, and its inline scanner branches on
+ * the character in front of it instead of trying a dozen regular expressions
+ * at every position. Two sweeps over the source: the first collects the
+ * block structure and every link reference definition, the second renders
+ * the blocks with the definitions complete (a definition used before it is
+ * defined still resolves, as in marked).
  */
 function fastParse(markdown) {
   return renderDocument(markdown);
 }
 
 // ---------------------------------------------------------------------------
-// Small helpers
+// Tiny helpers
 // ---------------------------------------------------------------------------
 
 const ESCAPE_REPLACEMENTS = {
@@ -63,7 +64,7 @@ const ESCAPE_REPLACE = /[&<>"']/g;
 const ESCAPE_TEST_NO_ENCODE = /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/;
 const ESCAPE_REPLACE_NO_ENCODE = /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g;
 
-/** Escape HTML entities. With encode, every & < > " ' is escaped; without it, only & that cannot start an entity. */
+/** Escape HTML entities. With encode, every & < > " ' is escaped; without it, only an & that cannot begin an entity. */
 function escapeHtmlEntities(html, encode) {
   if (encode) {
     if (ESCAPE_TEST.test(html)) return html.replace(ESCAPE_REPLACE, getEscapeReplacement);
@@ -120,7 +121,7 @@ function findClosingBracket(str, b) {
   return -1;
 }
 
-/** Remove trailing `c` characters (or, inverted, trailing non-`c` characters). */
+/** Strip trailing `c` characters (or, inverted, trailing non-`c` characters). */
 function rtrim(str, c, invert) {
   const l = str.length;
   if (l === 0) return '';
@@ -1620,4 +1621,3 @@ function renderDocument(markdown) {
   if (nodes === null) return null;
   return renderNodes(nodes, ctx);
 }
-

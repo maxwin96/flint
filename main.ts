@@ -4,8 +4,8 @@
 // (or $MAKEFUN_INPUT_DIR outside a container) and expects the rendered HTML
 // at /output/html.json (or $MAKEFUN_OUTPUT_DIR): a JSON array of one HTML
 // string per case, in the cases' order. Each case is rendered alone through
-// parse() from parse.js, which is the fast renderer in this repository; it
-// falls back to the vendored marked for any input it declines.
+// parse() from parse.js, the fast renderer in this repository; it falls back
+// to the vendored marked for any input it declines.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
